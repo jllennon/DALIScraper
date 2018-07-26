@@ -54,15 +54,24 @@ def getAndWritePDBFiles(proteins, l_ali_thresh, n_res_thresh, description_req, o
     pdb_names = []
     pdb = PDBList()
 
+    structures = ''
+
     for protein in proteins:
-        if protein._l_ali >= l_ali_thresh or protein._n_res >= n_res_thresh and protein._pdb_id not in pdb_list:
+        if protein._l_ali >= l_ali_thresh and protein._n_res >= n_res_thresh and protein._pdb_id not in pdb_names:
             pdb.retrieve_pdb_file(protein._pdb_id, file_format="pdb", pdir=output_dir)
             pdb_names.append(protein._pdb_id)
 
+            if len(structures) > 0:
+                structures += '\n'
+
+            structures += protein._pdb_id + ' ' + protein._chain
+
+    with open(output_dir + '/structures_list.txt', 'w+') as f:
+        f.write(structures)
 
 proteins = scrapePage('http://ekhidna2.biocenter.helsinki.fi/barcosel/tmp//2v5wA/2v5wA.html', 5)
 
-if len(proteins > 0):
+if len(proteins) > 0:
     getAndWritePDBFiles(proteins, 360, 360, ("HISTONE", "HDAC"), "/Users/work/dali")
     print("Done.")
 else:
