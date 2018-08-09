@@ -1,3 +1,21 @@
+'''
+DALI Scraper
+A small script that downloads the PDB files for structures listed on the DALI Lite results page.
+
+Author: Jim Lennon
+Date: July 26, 2018
+
+To run: Run this script, followed by these arguments:
+    - DALI Lite results URL
+    - Output directory
+    - Minimum number of residues required
+    - Minimum linear alignment count
+    - Maximum number of proteins to check against on the page
+    - Required descriptions. There can be multiple allowed descriptions
+
+Returns: All of the PDB files and a text file containing the PDB ID and the first chain that DALI Lite selected
+'''
+
 import sys
 import requests
 from Bio.PDB import PDBList
@@ -43,7 +61,7 @@ def getInputs(args):
 
     descs = []
 
-    for i in range(len(args.argv[6:])):
+    for i in range(6, len(args.argv)):
         descs.append(args.argv[i])
 
     return url, output_dir, nres, l_ali, max_num, descs
@@ -88,6 +106,7 @@ def scrape_page(url, max_proteins):
 def get_pdb_files(proteins, l_ali_thresh, n_res_thresh, description_req, output_dir):
     pdb_names = []
     structures = ''
+    count = 0
 
     pdb = PDBList()
 
@@ -97,8 +116,8 @@ def get_pdb_files(proteins, l_ali_thresh, n_res_thresh, description_req, output_
                 and protein.get_pdb_id() not in pdb_names:
 
             desc_found = False
-            for word in description_req:
-                if word in description_req:
+            for desc in description_req:
+                if protein.get_desc().find(desc) >= 0:
                     desc_found = True
                     break
 
@@ -112,8 +131,9 @@ def get_pdb_files(proteins, l_ali_thresh, n_res_thresh, description_req, output_
                 structures += '\n'
 
             structures += protein.get_pdb_id() + ' ' + protein.get_chain()
+            count += 1
 
-    return structures
+    return structures, count
 
 
 def write_pdb_list(structures, output_dir):
@@ -122,14 +142,13 @@ def write_pdb_list(structures, output_dir):
 
 
 url, output_dir, l_ali, n_res, max_num, desc = getInputs(sys)
-# proteins = scrape_page('http://ekhidna2.biocenter.helsinki.fi/barcosel/tmp//2v5wA/2v5wA.html', max_num)
 proteins = scrape_page(url, max_num)
 
 if len(proteins) > 0:
-    structures = get_pdb_files(proteins, l_ali, n_res, desc, output_dir)
+    structures, count = get_pdb_files(proteins, l_ali, n_res, desc, output_dir)
     write_pdb_list(structures, output_dir)
 
-    print("Done.")
+    print(count, "structures found.\nDone.")
 else:
     print("No proteins were found that match your search criteria.")
 
