@@ -52,7 +52,7 @@ class Protein:
     def set_pdb_file(self, pdb_file):
         self._pdb_file = pdb_file
 
-def getInputs(args):
+def get_inputs(args):
     url = args.argv[1]
     output_dir = args.argv[2]
     nres = int(args.argv[3])
@@ -103,45 +103,48 @@ def scrape_page(url, max_proteins):
     return protein_list
 
 
+def validate_proteins(protein, pdb_names, l_ali_thresh, n_res_thresh, description_req):
+    if protein.get_l_ali() >= l_ali_thresh \
+            and protein.get_n_res() >= n_res_thresh \
+            and protein.get_pdb_id() not in pdb_names:
+
+        for desc in description_req:
+            if protein.get_desc().find(desc) >= 0:
+                return True
+
+    return False
+
+
 def get_pdb_files(proteins, l_ali_thresh, n_res_thresh, description_req, output_dir):
     pdb_names = []
-    structures = ''
+    structures =   "PDB_ID  chain  l_ali  n_res  description\n" \
+                 + "------  -----  -----  -----  -----------"
     count = 0
 
     pdb = PDBList()
 
     for protein in proteins:
-        if protein.get_l_ali() >= l_ali_thresh \
-                and protein.get_n_res() >= n_res_thresh \
-                and protein.get_pdb_id() not in pdb_names:
-
-            desc_found = False
-            for desc in description_req:
-                if protein.get_desc().find(desc) >= 0:
-                    desc_found = True
-                    break
-
-            if not desc_found:
-                continue
-
+        if validate_proteins(protein, pdb_names, l_ali_thresh, n_res_thresh, description_req):
             pdb.retrieve_pdb_file(protein.get_pdb_id(), file_format="pdb", pdir=output_dir)
             pdb_names.append(protein.get_pdb_id())
 
-            if len(structures) > 0:
-                structures += '\n'
-
-            structures += protein.get_pdb_id() + ' ' + protein.get_chain()
+            structures += "\n" \
+                          + protein.get_pdb_id() + "    " \
+                          + protein.get_chain() + "      " \
+                          + str(protein.get_l_ali()) + "    " \
+                          + str(protein.get_n_res()) + "    " \
+                          + protein.get_desc()
             count += 1
 
     return structures, count
 
 
 def write_pdb_list(structures, output_dir):
-    with open(output_dir + '/structures_list.txt', 'w+') as f:
+    with open(output_dir + "/structures_list.txt", "w+") as f:
         f.write(structures)
 
 
-url, output_dir, l_ali, n_res, max_num, desc = getInputs(sys)
+url, output_dir, l_ali, n_res, max_num, desc = get_inputs(sys)
 proteins = scrape_page(url, max_num)
 
 if len(proteins) > 0:
